@@ -164,11 +164,36 @@ class TrelloServer {
             .array(z.string())
             .optional()
             .describe('Array of label IDs to apply to the card'),
+          pos: z
+            .string()
+            .optional()
+            .refine(
+              (val) => {
+                if (!val) return true; // Optional parameter
+                if (val === 'top' || val === 'bottom') return true;
+                const num = Number(val);
+                return num > 0 && isFinite(num);
+              },
+              {
+                message: "Position must be 'top', 'bottom', or a positive finite numeric string.",
+              }
+            )
+            .describe(
+              'Position in list: "top" (add to top of list), "bottom" (add to bottom of list), or a numeric string (e.g. "1536"). To place between two cards, use the average of their pos values.'
+            ),
         },
       },
       async args => {
         try {
-          const card = await this.trelloClient.addCard(args.boardId, args);
+          // Parse position if provided
+          const parsedArgs = {
+            ...args,
+            pos: args.pos
+              ? (args.pos === 'top' || args.pos === 'bottom' ? args.pos : Number(args.pos))
+              : undefined
+          };
+
+          const card = await this.trelloClient.addCard(args.boardId, parsedArgs);
           return {
             content: [{ type: 'text' as const, text: JSON.stringify(card, null, 2) }],
           };
