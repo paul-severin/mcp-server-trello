@@ -322,6 +322,7 @@ export class TrelloClient {
       start?: string;
       dueComplete?: boolean;
       labels?: string[];
+      pos?: string | number;
     }
   ): Promise<TrelloCard> {
     return this.handleRequest(async () => {
@@ -332,6 +333,7 @@ export class TrelloClient {
         start: params.start,
         dueComplete: params.dueComplete,
         idLabels: params.labels,
+        pos: params.pos,
       });
       return response.data;
     });

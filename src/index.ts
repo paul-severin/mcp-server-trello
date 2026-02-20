@@ -179,7 +179,7 @@ class TrelloServer {
       'update_card_details',
       {
         title: 'Update Card Details',
-        description: "Update an existing card's details on a specific board",
+        description: "Update an existing card's details on a specific board. Can update name, description, dates, labels, and position within the list.",
         inputSchema: {
           boardId: z
             .string()
@@ -198,11 +198,36 @@ class TrelloServer {
             .optional()
             .describe('Mark the due date as complete (true) or incomplete (false)'),
           labels: z.array(z.string()).optional().describe('New array of label IDs for the card'),
+          pos: z
+            .string()
+            .optional()
+            .refine(
+              (val) => {
+                if (!val) return true; // Optional parameter
+                if (val === 'top' || val === 'bottom') return true;
+                const num = Number(val);
+                return num > 0 && isFinite(num);
+              },
+              {
+                message: "Position must be 'top', 'bottom', or a positive finite numeric string.",
+              }
+            )
+            .describe(
+              'New position: "top" (move to top of list), "bottom" (move to bottom of list), or a numeric string (e.g. "1536"). To place between two cards, use the average of their pos values.'
+            ),
         },
       },
       async args => {
         try {
-          const card = await this.trelloClient.updateCard(args.boardId, args);
+          // Parse position if provided
+          const parsedArgs = {
+            ...args,
+            pos: args.pos
+              ? (args.pos === 'top' || args.pos === 'bottom' ? args.pos : Number(args.pos))
+              : undefined
+          };
+
+          const card = await this.trelloClient.updateCard(args.boardId, parsedArgs);
           return {
             content: [{ type: 'text' as const, text: JSON.stringify(card, null, 2) }],
           };
